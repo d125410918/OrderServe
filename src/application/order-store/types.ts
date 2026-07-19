@@ -1,6 +1,7 @@
 import type { CartState } from "@/domain/cart/cart-machine";
 import type { OrderMode } from "@/domain/catalog/types";
 import type { RoomState } from "@/domain/group-order/room-machine";
+import type { OrderEvent, OrderState } from "@/domain/order/order-machine";
 
 export type IllustrationKind = "chicken" | "spicy" | "nuggets" | "meal" | "fries" | "drink" | "rice" | "dessert";
 
@@ -38,26 +39,44 @@ export type GroupRoom = {
   announcement: string;
 };
 
+export type OrderSnapshotLine = CartLine & { participantName?: string };
+
 export type CompletedOrder = {
   id: string;
   number: string;
   amount: number;
+  subtotal: number;
+  deliveryFee: number;
+  packagingFee: number;
+  discount: number;
+  branchId: string;
   branchName: string;
   mode: OrderMode;
+  source: "cart" | "group";
+  status: OrderState;
   paymentMethod: "LINE Pay";
+  paymentId: string;
+  items: OrderSnapshotLine[];
+  participants: RoomParticipant[];
+  note: string;
+  invoice: "mobile" | "company" | "donate";
   createdAt: number;
+};
+
+export type CheckoutSession = {
+  state: "IDLE" | "PAYMENT_PENDING" | "FAILED";
+  attemptId: string | null;
+  error: string | null;
 };
 
 export type OrderAppState = {
   branchId: string;
   mode: OrderMode;
-  cart: {
-    state: CartState;
-    items: CartLine[];
-    coupon: string;
-  };
+  cart: { state: CartState; items: CartLine[]; coupon: string };
   room: GroupRoom | null;
-  lastOrder: CompletedOrder | null;
+  checkout: CheckoutSession;
+  orders: CompletedOrder[];
+  lastOrderId: string | null;
 };
 
 export type OrderAction =
@@ -71,6 +90,10 @@ export type OrderAction =
   | { type: "cart/clear" }
   | { type: "room/create"; payload: { code: string; hostName: string; deadlineAt: number; branchId: string; mode: OrderMode } }
   | { type: "room/submitParticipant"; participant: RoomParticipant }
-  | { type: "room/setState"; state: RoomState }
+  | { type: "room/lock" }
+  | { type: "room/prepareCheckout" }
   | { type: "room/extend"; milliseconds: number }
-  | { type: "order/complete"; order: CompletedOrder };
+  | { type: "checkout/start"; attemptId: string }
+  | { type: "checkout/fail"; error: string }
+  | { type: "order/complete"; order: CompletedOrder }
+  | { type: "order/transition"; orderId: string; event: OrderEvent };

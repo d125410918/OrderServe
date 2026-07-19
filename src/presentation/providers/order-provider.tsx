@@ -1,12 +1,11 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
-import { initialOrderState, orderReducer } from "@/application/order-store/reducer";
-import type { CartLine, CompletedOrder, OrderAppState, RoomParticipant } from "@/application/order-store/types";
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from "react";
 import type { OrderMode } from "@/domain/catalog/types";
-import type { RoomState } from "@/domain/group-order/room-machine";
-
-const STORAGE_KEY = "dongji-order-state-v1";
+import type { OrderEvent } from "@/domain/order/order-machine";
+import { initialOrderState, orderReducer } from "@/application/order-store/reducer";
+import { LEGACY_ORDER_STORAGE_KEY, normalizePersistedOrderState, ORDER_STORAGE_KEY, serializeOrderState } from "@/application/order-store/persistence";
+import type { CartLine, CompletedOrder, OrderAppState, RoomParticipant } from "@/application/order-store/types";
 
 type OrderContextValue = {
   state: OrderAppState;
@@ -20,30 +19,34 @@ type OrderContextValue = {
   clearCart: () => void;
   createRoom: (payload: { code: string; hostName: string; deadlineAt: number; branchId: string; mode: OrderMode }) => void;
   submitParticipant: (participant: RoomParticipant) => void;
-  setRoomState: (state: RoomState) => void;
+  lockRoom: () => void;
+  prepareRoomCheckout: () => void;
   extendRoom: (milliseconds: number) => void;
+  startCheckout: (attemptId: string) => void;
+  failCheckout: (error: string) => void;
   completeOrder: (order: CompletedOrder) => void;
+  transitionOrderStatus: (orderId: string, event: OrderEvent) => void;
 };
 
 const OrderContext = createContext<OrderContextValue | null>(null);
 
-export function OrderProvider({ children }: { children: ReactNode }) {
+export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(orderReducer, initialOrderState);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved) dispatch({ type: "hydrate", state: JSON.parse(saved) as OrderAppState });
-    } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } finally {
-      setHydrated(true);
+    const saved = window.localStorage.getItem(ORDER_STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_ORDER_STORAGE_KEY);
+    if (saved) {
+      try { dispatch({ type: "hydrate", state: normalizePersistedOrderState(JSON.parse(saved)) }); }
+      catch { dispatch({ type: "hydrate", state: initialOrderState }); }
     }
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (hydrated) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (!hydrated) return;
+    window.localStorage.setItem(ORDER_STORAGE_KEY, serializeOrderState(state));
+    window.localStorage.removeItem(LEGACY_ORDER_STORAGE_KEY);
   }, [state, hydrated]);
 
   const setBranch = useCallback((branchId: string) => dispatch({ type: "branch/set", branchId }), []);
@@ -55,17 +58,20 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const clearCart = useCallback(() => dispatch({ type: "cart/clear" }), []);
   const createRoom = useCallback((payload: { code: string; hostName: string; deadlineAt: number; branchId: string; mode: OrderMode }) => dispatch({ type: "room/create", payload }), []);
   const submitParticipant = useCallback((participant: RoomParticipant) => dispatch({ type: "room/submitParticipant", participant }), []);
-  const setRoomState = useCallback((roomState: RoomState) => dispatch({ type: "room/setState", state: roomState }), []);
+  const lockRoom = useCallback(() => dispatch({ type: "room/lock" }), []);
+  const prepareRoomCheckout = useCallback(() => dispatch({ type: "room/prepareCheckout" }), []);
   const extendRoom = useCallback((milliseconds: number) => dispatch({ type: "room/extend", milliseconds }), []);
+  const startCheckout = useCallback((attemptId: string) => dispatch({ type: "checkout/start", attemptId }), []);
+  const failCheckout = useCallback((error: string) => dispatch({ type: "checkout/fail", error }), []);
   const completeOrder = useCallback((order: CompletedOrder) => dispatch({ type: "order/complete", order }), []);
+  const transitionOrderStatus = useCallback((orderId: string, event: OrderEvent) => dispatch({ type: "order/transition", orderId, event }), []);
 
-  const value = useMemo(() => ({ state, hydrated, setBranch, setMode, addToCart, setQuantity, removeFromCart, setCoupon, clearCart, createRoom, submitParticipant, setRoomState, extendRoom, completeOrder }), [state, hydrated, setBranch, setMode, addToCart, setQuantity, removeFromCart, setCoupon, clearCart, createRoom, submitParticipant, setRoomState, extendRoom, completeOrder]);
-
+  const value = useMemo<OrderContextValue>(() => ({ state, hydrated, setBranch, setMode, addToCart, setQuantity, removeFromCart, setCoupon, clearCart, createRoom, submitParticipant, lockRoom, prepareRoomCheckout, extendRoom, startCheckout, failCheckout, completeOrder, transitionOrderStatus }), [state, hydrated, setBranch, setMode, addToCart, setQuantity, removeFromCart, setCoupon, clearCart, createRoom, submitParticipant, lockRoom, prepareRoomCheckout, extendRoom, startCheckout, failCheckout, completeOrder, transitionOrderStatus]);
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>;
 }
 
 export function useOrder(): OrderContextValue {
-  const value = useContext(OrderContext);
-  if (!value) throw new Error("useOrder 必須在 OrderProvider 內使用");
-  return value;
+  const context = useContext(OrderContext);
+  if (!context) throw new Error("useOrder 必須在 OrderProvider 內使用");
+  return context;
 }

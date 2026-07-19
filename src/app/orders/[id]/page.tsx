@@ -1,0 +1,17 @@
+"use client";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { ClipboardList, Home } from "lucide-react";
+import { PageHeader } from "@/presentation/components/page-header";
+import { ProductArt } from "@/presentation/components/product-art";
+import { useOrder } from "@/presentation/providers/order-provider";
+const statusText = { PAID: "已付款，等待店家接單", ACCEPTED: "店家已接單", PREPARING: "製作中", READY_FOR_PICKUP: "待取餐", OUT_FOR_DELIVERY: "配送中", COMPLETED: "已完成" } as const;
+export default function OrderDetailPage() {
+  const params = useParams<{ id: string }>();
+  const { state, hydrated } = useOrder();
+  const order = state.orders.find((item) => item.id === params.id) ?? null;
+  if (!hydrated) return <main className="page-gradient"><PageHeader title="訂單明細" subtitle="正在載入訂單…" /></main>;
+  if (!order) return <main className="page-gradient"><PageHeader title="訂單明細" subtitle="找不到指定的訂單" /><section className="page-card"><div className="page-card__body empty-state"><ClipboardList size={42} /><h2>訂單不存在</h2><Link href="/orders" className="button button--primary">查看全部訂單</Link></div></section></main>;
+  const visibleStatus = order.status in statusText ? statusText[order.status as keyof typeof statusText] : order.status;
+  return <main className="page-gradient"><PageHeader title="訂單明細" subtitle={`訂單編號 ${order.number}`} /><section className="page-card"><div className="page-card__body summary-list"><div className="summary-row"><span>目前狀態</span><strong>{visibleStatus}</strong></div><div className="summary-row"><span>訂購店家</span><strong>{order.branchName}</strong></div><div className="summary-row"><span>付款方式</span><span className="line-pay">LINE <b>Pay</b></span></div><div className="summary-row"><span>建立時間</span><strong>{new Date(order.createdAt).toLocaleString("zh-TW")}</strong></div></div></section><section className="page-card"><div className="page-card__header"><h2>餐點快照</h2></div><div className="page-card__body cart-list">{order.items.map((item) => <article className="cart-line" key={item.lineId}><div className="cart-line__visual"><ProductArt kind={item.illustration} size="thumb" /></div><div><h3>{item.name}{item.participantName ? `（${item.participantName}）` : ""}</h3><p>{item.selections.join("・") || "標準設定"}</p>{item.note && <p>備註：{item.note}</p>}</div><div className="cart-line__actions"><strong>× {item.quantity}</strong><span className="price">NT$ {item.unitPrice * item.quantity}</span></div></article>)}</div></section><section className="page-card"><div className="page-card__header"><h2>金額明細</h2></div><div className="page-card__body summary-list"><div className="summary-row"><span>小計</span><span>NT$ {order.subtotal}</span></div><div className="summary-row"><span>外送費</span><span>NT$ {order.deliveryFee}</span></div><div className="summary-row"><span>包裝費</span><span>NT$ {order.packagingFee}</span></div>{order.discount > 0 && <div className="summary-row"><span>優惠折扣</span><span>− NT$ {order.discount}</span></div>}<div className="summary-row summary-row--total"><span>已付款總額</span><strong className="price">NT$ {order.amount}</strong></div></div></section><div style={{ width: "min(920px, calc(100% - 28px))", margin: "0 auto", display: "grid", gap: 10 }}><Link href="/menu" className="button button--primary button--block"><Home size={18} />回到首頁</Link><Link href="/orders" className="button button--outline button--block"><ClipboardList size={18} />查看全部訂單</Link></div></main>;
+}

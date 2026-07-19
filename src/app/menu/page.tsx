@@ -19,7 +19,7 @@ const filters: Array<{ value: ProductFilter; label: string }> = [
 ];
 
 export default function MenuPage() {
-  const { addToCart } = useOrder();
+  const { state, addToCart } = useOrder();
   const [categoryId, setCategoryId] = useState("all");
   const [filter, setFilter] = useState<ProductFilter>("all");
   const [query, setQuery] = useState("");
@@ -51,6 +51,7 @@ export default function MenuPage() {
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜尋餐點，例如：炸雞、套餐、飲料" aria-label="搜尋餐點" />
           </label>
           <div className="toolbar-actions">
+            {state.lastOrderId && <Link href={`/orders/${state.lastOrderId}`} className="button button--outline">查看最近訂單</Link>}
             <button type="button" className="button button--outline" onClick={() => setFilter(filter === "available" ? "all" : "available")}><Filter size={18} /><span>篩選</span></button>
             <Link href="/group/create" className="button button--gold"><UsersRound size={18} /><span>一起點</span></Link>
           </div>
