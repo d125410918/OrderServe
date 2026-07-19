@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Clock3, Copy, Link2, MapPin, Megaphone, Plus, QrCode, Send, UsersRound } from "lucide-react";
-import { getBranch } from "@/infrastructure/mock/catalog";
 import { PageHeader } from "@/presentation/components/page-header";
 import { useOrder } from "@/presentation/providers/order-provider";
+import { useCatalog } from "@/presentation/providers/catalog-provider";
 import type { RoomParticipant } from "@/application/order-store/types";
 
 const seedParticipants: RoomParticipant[] = [
@@ -24,6 +24,7 @@ function formatRemaining(deadlineAt: number): string {
 export default function GroupRoomPage() {
   const router = useRouter();
   const { state, hydrated, submitParticipant, lockRoom, extendRoom, prepareRoomCheckout, clearCart } = useOrder();
+  const { getBranch } = useCatalog();
   const [remaining, setRemaining] = useState("15:00");
   useEffect(() => {
     if (hydrated && !state.room) router.replace("/group/join");

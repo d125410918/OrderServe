@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Clock3, Copy, Hash, Link2, LockKeyhole, MapPin, QrCode, Store, UserRound, WalletCards } from "lucide-react";
-import { branches } from "@/infrastructure/mock/catalog";
 import { PageHeader } from "@/presentation/components/page-header";
 import { ModeSwitcher } from "@/presentation/components/mode-switcher";
 import { useOrder } from "@/presentation/providers/order-provider";
+import { useCatalog } from "@/presentation/providers/catalog-provider";
 
 function generateRoomCode(): string {
   const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -16,6 +16,7 @@ function generateRoomCode(): string {
 export default function CreateGroupRoomPage() {
   const router = useRouter();
   const { state, setBranch, setMode, createRoom } = useOrder();
+  const { activeBranches } = useCatalog();
   const [hostName, setHostName] = useState("");
   const [address, setAddress] = useState("台北市信義區松壽路 12 號");
   const [deadlineMinutes, setDeadlineMinutes] = useState(15);
@@ -35,7 +36,7 @@ export default function CreateGroupRoomPage() {
       <PageHeader title="建立一起點房間" subtitle="建立房間並分享給朋友，一起點餐更方便。" />
       <section className="page-card">
         <div className="page-card__body form-grid">
-          <div className="form-row"><Store /><label htmlFor="branch">分店</label><select id="branch" value={state.branchId} onChange={(event) => setBranch(event.target.value)}>{branches.map((branch) => <option value={branch.id} key={branch.id}>{branch.name}</option>)}</select></div>
+          <div className="form-row"><Store /><label htmlFor="branch">分店</label><select id="branch" value={state.branchId} onChange={(event) => setBranch(event.target.value)}>{activeBranches.map((branch) => <option value={branch.id} key={branch.id}>{branch.name}</option>)}</select></div>
           <div className="form-row"><MapPin /><span className="form-row__label">取餐方式</span><ModeSwitcher compact value={state.mode} onChange={setMode} /></div>
           <div className="form-row"><Hash /><span className="form-row__label">房號（自動產生）</span><strong style={{ textAlign: "right", color: "var(--red-700)", fontSize: "1.35rem" }}>{code}</strong></div>
           <div className="form-row"><UserRound /><label htmlFor="hostName">發起人名稱</label><input id="hostName" value={hostName} onChange={(event) => setHostName(event.target.value)} placeholder="選填，未填顯示匿名房主" /></div>
