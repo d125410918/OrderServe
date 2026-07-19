@@ -1,11 +1,12 @@
-# 驗證報告 v1.0.1
+# 驗證報告 v1.0.2
 
-- Vitest：11 個測試檔、30 項測試通過。
+- Vitest：15 個測試檔、40 項測試通過。
 - ESLint：0 errors、0 warnings。
 - Next.js Production Build：15 個路由建置通過。
-- E2E：手機 390×844 與桌面 1440×1000 核心流程通過。
-- 驗證項目：付款、訂單快照、查看訂單、回首頁清空購物車、返回結帳防重複付款、管理端接單、顧客狀態同步、一起點房間、路由守衛及水平溢位。
-- npm 安裝來源：公開 `https://registry.npmjs.org/`。
-- 本次 `npm audit` 因執行環境 npm 代理回傳 HTTP 502，無法取得新的稽核結果；不得視為漏洞檢查通過或失敗。
+- 手機 E2E：390×844 一般點餐、付款、訂單查詢、一起點、路由守衛、新增乾淨分店、分區、菜品圖片、發布、跨店購物車隔離與水平溢位檢查通過。
+- 桌面 E2E：1440×1000 相同核心流程與版面檢查通過。
+- 新分店：`SETUP` 空白建立、分店菜單隔離、圖片發布條件與 `ACTIVE／PAUSED` 狀態轉換均有自動測試。
+- 圖片：JPG、PNG、WebP 格式與 6 MB 上限有單元測試；實際瀏覽器上傳、壓縮、保存與顧客端顯示有 E2E 驗證。
+- 視覺截圖：新增 `desktop-branch-menu.png`、`mobile-branch-menu.png`、`desktop-branches-v102.png`。
 
-完整狀態機分析見 `STATE_MACHINE_AUDIT.md`。
+完整分析見 `STATE_MACHINE_AUDIT.md`。

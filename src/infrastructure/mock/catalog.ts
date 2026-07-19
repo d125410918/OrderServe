@@ -182,9 +182,9 @@ export const products: Product[] = [
 ];
 
 export const branches: Branch[] = [
-  { id: "xinyi", brandId: "dongji", name: "台北信義店", address: "台北市信義區松壽路 12 號", phone: "02-2720-1688", eta: "25–35 分鐘", isOpen: true, deliveryFee: 49, packagingFee: 10 },
-  { id: "banqiao", brandId: "dongji", name: "板橋新站店", address: "新北市板橋區新站路 28 號", phone: "02-2950-7700", eta: "30–40 分鐘", isOpen: true, deliveryFee: 39, packagingFee: 10 },
-  { id: "taichung", brandId: "dongji", name: "台中公益店", address: "台中市西區公益路 168 號", phone: "04-2328-8899", eta: "20–30 分鐘", isOpen: true, deliveryFee: 45, packagingFee: 10 },
+  { id: "xinyi", brandId: "dongji", name: "台北信義店", address: "台北市信義區松壽路 12 號", phone: "02-2720-1688", eta: "25–35 分鐘", isOpen: true, deliveryFee: 49, packagingFee: 10, lifecycle: "ACTIVE", createdAt: 1 },
+  { id: "banqiao", brandId: "dongji", name: "板橋新站店", address: "新北市板橋區新站路 28 號", phone: "02-2950-7700", eta: "30–40 分鐘", isOpen: true, deliveryFee: 39, packagingFee: 10, lifecycle: "ACTIVE", createdAt: 2 },
+  { id: "taichung", brandId: "dongji", name: "台中公益店", address: "台中市西區公益路 168 號", phone: "04-2328-8899", eta: "20–30 分鐘", isOpen: true, deliveryFee: 45, packagingFee: 10, lifecycle: "ACTIVE", createdAt: 3 },
 ];
 
 export function getProduct(id: string): Product | undefined {

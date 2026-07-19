@@ -30,7 +30,16 @@ function prepareRoomForCheckout(state: OrderAppState): OrderAppState {
 export function orderReducer(state: OrderAppState, action: OrderAction): OrderAppState {
   switch (action.type) {
     case "hydrate": return action.state;
-    case "branch/set": return { ...state, branchId: action.branchId };
+    case "branch/set": {
+      if (state.branchId === action.branchId) return state;
+      return {
+        ...state,
+        branchId: action.branchId,
+        cart: { state: "EMPTY", items: [], coupon: "" },
+        room: null,
+        checkout: { state: "IDLE", attemptId: null, error: null },
+      };
+    }
     case "mode/set": return { ...state, mode: action.mode };
     case "cart/add": {
       const resetRequired = ["EMPTY", "CONVERTED", "ABANDONED"].includes(state.cart.state);

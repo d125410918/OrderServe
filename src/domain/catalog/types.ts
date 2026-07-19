@@ -1,4 +1,5 @@
 export type OrderMode = "delivery" | "pickup" | "dine-in";
+export type BranchLifecycleState = "SETUP" | "ACTIVE" | "PAUSED" | "ARCHIVED";
 
 export type ModifierOption = {
   id: string;
@@ -48,4 +49,6 @@ export type Branch = {
   isOpen: boolean;
   deliveryFee: number;
   packagingFee: number;
+  lifecycle: BranchLifecycleState;
+  createdAt: number;
 };

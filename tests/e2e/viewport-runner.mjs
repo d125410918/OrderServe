@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 import { chromium as playwrightChromium } from "playwright";
 import chromium from "@sparticuz/chromium";
 
@@ -22,7 +23,7 @@ async function withIsolatedPage(task) {
 
 async function verifyOrderingFlow(page) {
   await page.goto(`${BASE_URL}/menu`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "雙享餐", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "人氣雙享餐", exact: true }).waitFor();
   await page.getByRole("button", { name: "快速加入咚雞原味炸雞" }).click();
   assert.match((await page.getByRole("region", { name: "購物車摘要" }).textContent()) ?? "", /購物車 1 項/);
   await page.getByRole("link", { name: /查看購物車/ }).click();
@@ -79,8 +80,43 @@ async function verifyRouteGuards(page) {
 async function verifyAdmin(page) {
   await page.goto(`${BASE_URL}/admin`, { waitUntil: "domcontentloaded" });
   const title = page.getByRole("heading", { name: "營運儀表板" });
-  await title.waitFor(); await page.getByText("今日營業額").waitFor();
+  await title.waitFor(); await page.getByText("目前保存訂單營業額").waitFor();
   if (width <= 640) { const box = await title.boundingBox(); assert.ok(box && box.height <= 52, `手機管理端標題高度不應超過 52px，實際為 ${box?.height ?? "未知"}px`); }
+}
+
+
+async function verifyBranchManagement(page) {
+  const branchName = `自動測試分店-${name}`;
+  const productName = `限定餐點-${name}`;
+  await page.goto(`${BASE_URL}/admin/branches`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "新增分店" }).click();
+  await page.getByLabel("分店名稱").fill(branchName);
+  await page.getByLabel("完整地址").fill("台北市測試區流程路 100 號");
+  await page.getByLabel("聯絡電話").fill("02-1234-5678");
+  await page.getByRole("button", { name: "建立並進入菜單設定" }).click();
+  await page.waitForFunction(() => window.location.pathname === "/admin/menu", undefined, { timeout: 10_000 });
+  await page.getByText("每間分店皆使用獨立菜單，不會互相覆蓋。").waitFor();
+  await page.getByPlaceholder("輸入新分區名稱，例如：主餐").fill("店長主餐");
+  await page.getByRole("button", { name: "新增分區" }).click();
+  await page.getByRole("button", { name: "新增菜品" }).click();
+  await page.getByLabel("菜品名稱").fill(productName);
+  await page.getByLabel("售價").fill("188");
+  await page.getByLabel("卡片簡介").fill("新分店獨立菜單測試");
+  await page.locator('input[type="file"]').setInputFiles(path.resolve("tests/fixtures/test-product.png"));
+  await page.getByRole("button", { name: "儲存菜品" }).click();
+  await page.getByText(productName).waitFor();
+  const publishButton = page.getByRole("button", { name: "發布分店" });
+  await publishButton.waitFor();
+  assert.equal(await publishButton.isEnabled(), true, "完成分區、菜品與圖片後應可發布分店");
+  await publishButton.click();
+  await page.goto(`${BASE_URL}/menu`, { waitUntil: "domcontentloaded" });
+  const branchSelector = page.getByLabel("選擇分店");
+  await branchSelector.selectOption({ label: branchName });
+  await page.getByRole("heading", { name: productName, level: 1 }).waitFor();
+  await page.getByRole("button", { name: `快速加入${productName}` }).click();
+  assert.match((await page.getByRole("region", { name: "購物車摘要" }).textContent()) ?? "", /購物車 1 項/);
+  await branchSelector.selectOption("xinyi");
+  assert.equal(await page.getByRole("region", { name: "購物車摘要" }).count(), 0, "跨分店切換必須清除活動購物車");
 }
 
 async function verifyOverflow(page) {
@@ -97,6 +133,7 @@ try {
     await withIsolatedPage(verifyOrderingFlow); console.log(`✓ ${name}：一般點餐、訂單查詢與管理端接單`);
     await withIsolatedPage(verifyGroupOrderFlow); console.log(`✓ ${name}：一起點房間、參與者明細與送單`);
     await withIsolatedPage(verifyRouteGuards); console.log(`✓ ${name}：成功頁與房間頁路由守衛`);
+    await withIsolatedPage(verifyBranchManagement); console.log(`✓ ${name}：乾淨分店、分區、菜品圖片、發布與跨店購物車隔離`);
   }
   if (phase === "all" || phase === "layout") { await withIsolatedPage(verifyAdmin); await withIsolatedPage(verifyOverflow); console.log(`✓ ${name}：管理端與六個主要頁面無水平溢位`); }
   if (!["all", "flows", "layout"].includes(phase)) throw new Error(`未知驗證階段：${phase}`);

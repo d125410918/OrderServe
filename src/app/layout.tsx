@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./manager.css";
 import { OrderProvider } from "@/presentation/providers/order-provider";
+import { CatalogProvider } from "@/presentation/providers/catalog-provider";
 
 export const metadata: Metadata = {
   title: "咚雞點餐｜多品牌餐飲點餐系統",
@@ -18,7 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="zh-Hant-TW" data-scroll-behavior="smooth">
       <body>
-        <OrderProvider>{children}</OrderProvider>
+        <CatalogProvider><OrderProvider>{children}</OrderProvider></CatalogProvider>
       </body>
     </html>
   );
