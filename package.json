@@ -1,47 +1,21 @@
-{
-  "name": "dongji-ordering-web",
-  "version": "1.0.1",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint src tests --max-warnings=0",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:e2e": "npm run build && bash tests/e2e/run-core-flows.sh",
-    "verify": "npm run test && npm run lint && npm run build"
-  },
-  "dependencies": {
-    "lucide-react": "1.25.0",
-    "next": "16.2.10",
-    "react": "19.2.7",
-    "react-dom": "19.2.7"
-  },
-  "devDependencies": {
-    "@eslint/js": "9.39.1",
-    "@sparticuz/chromium": "^149.0.0",
-    "@testing-library/jest-dom": "6.9.1",
-    "@testing-library/react": "16.3.2",
-    "@testing-library/user-event": "14.6.1",
-    "@types/node": "22.15.34",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "6.0.3",
-    "eslint": "9.39.1",
-    "globals": "^16.4.0",
-    "jsdom": "29.1.1",
-    "playwright": "1.61.1",
-    "typescript": "5.8.3",
-    "typescript-eslint": "8.64.0",
-    "vitest": "4.1.10"
-  },
-  "engines": {
-    "node": ">=22.17.0"
-  },
-  "overrides": {
-    "next": {
-      "postcss": "8.5.14"
-    }
-  }
+export type RoomState = "CREATED" | "OPEN" | "LOCKED" | "REVIEWING" | "CHECKOUT_PENDING" | "PAYMENT_PENDING" | "ORDER_CREATED" | "EXPIRED" | "CANCELLED" | "PURGED";
+export type RoomEvent = "OPEN" | "LOCK" | "REOPEN" | "REVIEW" | "READY_FOR_CHECKOUT" | "CREATE_PAYMENT" | "PAYMENT_SUCCEEDED" | "EXPIRE" | "CANCEL" | "PURGE";
+
+const transitions: Record<RoomState, Partial<Record<RoomEvent, RoomState>>> = {
+  CREATED: { OPEN: "OPEN", CANCEL: "CANCELLED" },
+  OPEN: { LOCK: "LOCKED", EXPIRE: "EXPIRED", CANCEL: "CANCELLED" },
+  LOCKED: { REOPEN: "OPEN", REVIEW: "REVIEWING", CANCEL: "CANCELLED" },
+  REVIEWING: { READY_FOR_CHECKOUT: "CHECKOUT_PENDING", REOPEN: "OPEN", CANCEL: "CANCELLED" },
+  CHECKOUT_PENDING: { CREATE_PAYMENT: "PAYMENT_PENDING", REOPEN: "OPEN", CANCEL: "CANCELLED" },
+  PAYMENT_PENDING: { PAYMENT_SUCCEEDED: "ORDER_CREATED", CANCEL: "CANCELLED" },
+  ORDER_CREATED: { PURGE: "PURGED" },
+  EXPIRED: { PURGE: "PURGED" },
+  CANCELLED: { PURGE: "PURGED" },
+  PURGED: {},
+};
+
+export function transitionRoom(state: RoomState, event: RoomEvent): RoomState {
+  const next = transitions[state][event];
+  if (!next) throw new Error(`非法房間狀態轉換：${state} -> ${event}`);
+  return next;
 }

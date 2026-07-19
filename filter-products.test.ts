@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+import { initialOrderState, orderReducer } from "./reducer";
+import type { CompletedOrder } from "./types";
+const item = { lineId: "line-1", productId: "original-chicken", name: "咚雞原味炸雞", image: "", illustration: "chicken" as const, unitPrice: 149, quantity: 1, selections: ["大份"], note: "" };
+const completedOrder: CompletedOrder = { id: "order-1", number: "A2026071900001", amount: 208, subtotal: 149, deliveryFee: 49, packagingFee: 10, discount: 0, branchId: "xinyi", branchName: "台北信義店", mode: "delivery", source: "cart", status: "PAID", paymentMethod: "LINE Pay", paymentId: "pay-order-1", items: [item], participants: [], note: "", invoice: "mobile", createdAt: 1_000_000 };
+describe("orderReducer", () => {
+  it("加入、調整與移除購物車品項", () => { const added = orderReducer(initialOrderState, { type: "cart/add", item }); expect(added.cart.items).toHaveLength(1); const incremented = orderReducer(added, { type: "cart/setQuantity", lineId: "line-1", quantity: 3 }); expect(incremented.cart.items[0].quantity).toBe(3); const removed = orderReducer(incremented, { type: "cart/remove", lineId: "line-1" }); expect(removed.cart.state).toBe("EMPTY"); });
+  it("建立房間後可提交參與者並更新總額", () => { const created = orderReducer(initialOrderState, { type: "room/create", payload: { code: "482761", hostName: "小美", deadlineAt: 1_000_000, branchId: "xinyi", mode: "delivery" } }); const submitted = orderReducer(created, { type: "room/submitParticipant", participant: { id: "p1", name: "小美", status: "submitted", items: [item], subtotal: 149 } }); expect(submitted.room?.total).toBe(149); });
+  it("付款完成後建立訂單快照並清除所有可再次付款的活動資料", () => { const withCart = orderReducer(initialOrderState, { type: "cart/add", item }); const withRoom = orderReducer(withCart, { type: "room/create", payload: { code: "482761", hostName: "小美", deadlineAt: 1_000_000, branchId: "xinyi", mode: "delivery" } }); const paying = orderReducer(withRoom, { type: "checkout/start", attemptId: "attempt-1" }); const completed = orderReducer(paying, { type: "order/complete", order: completedOrder }); expect(completed.orders).toEqual([completedOrder]); expect(completed.cart).toEqual({ state: "EMPTY", items: [], coupon: "" }); expect(completed.room).toBeNull(); });
+  it("切換至不同分店時會清除活動購物車、房間與付款狀態，但保留歷史訂單", () => {
+    let state = orderReducer(initialOrderState, { type: "order/complete", order: completedOrder });
+    state = orderReducer(state, { type: "cart/add", item: { ...item, lineId: "new-line" } });
+    state = orderReducer(state, { type: "room/create", payload: { code: "654321", hostName: "小華", deadlineAt: 2_000_000, branchId: "xinyi", mode: "delivery" } });
+    state = orderReducer(state, { type: "checkout/start", attemptId: "attempt-2" });
+    const switched = orderReducer(state, { type: "branch/set", branchId: "banqiao" });
+    expect(switched.branchId).toBe("banqiao");
+    expect(switched.cart).toEqual({ state: "EMPTY", items: [], coupon: "" });
+    expect(switched.room).toBeNull();
+    expect(switched.checkout).toEqual({ state: "IDLE", attemptId: null, error: null });
+    expect(switched.orders).toEqual([completedOrder]);
+  });
+  it("相同訂單完成事件重送時不建立重複訂單", () => { const once = orderReducer(initialOrderState, { type: "order/complete", order: completedOrder }); const twice = orderReducer(once, { type: "order/complete", order: completedOrder }); expect(twice.orders).toHaveLength(1); });
+  it("已付款後加入新餐點會建立全新的購物車", () => { const completed = orderReducer(initialOrderState, { type: "order/complete", order: completedOrder }); const nextItem = { ...item, lineId: "line-2", productId: "spicy", name: "韓式辣味炸雞" }; const next = orderReducer(completed, { type: "cart/add", item: nextItem }); expect(next.cart.items).toEqual([nextItem]); expect(next.cart.state).toBe("EDITING"); });
+  it("房間到期鎖定後禁止提交，延長時間可重新開放", () => { const created = orderReducer(initialOrderState, { type: "room/create", payload: { code: "482761", hostName: "小美", deadlineAt: 1_000_000, branchId: "xinyi", mode: "delivery" } }); const locked = orderReducer(created, { type: "room/lock" }); expect(locked.room?.state).toBe("LOCKED"); const rejected = orderReducer(locked, { type: "room/submitParticipant", participant: { id: "p1", name: "小美", status: "submitted", items: [item], subtotal: 149 } }); expect(rejected.room?.participants).toHaveLength(0); const reopened = orderReducer(locked, { type: "room/extend", milliseconds: 300_000 }); expect(reopened.room?.state).toBe("OPEN"); });
+  it("沒有任何已提交餐點時不得進入房間結帳狀態", () => { const created = orderReducer(initialOrderState, { type: "room/create", payload: { code: "482761", hostName: "小美", deadlineAt: 1_000_000, branchId: "xinyi", mode: "delivery" } }); expect(orderReducer(created, { type: "room/prepareCheckout" }).room?.state).toBe("OPEN"); });
+  it("管理端只能透過合法事件推進已付款訂單狀態", () => { const completed = orderReducer(initialOrderState, { type: "order/complete", order: completedOrder }); const accepted = orderReducer(completed, { type: "order/transition", orderId: completedOrder.id, event: "ACCEPT" }); expect(accepted.orders[0].status).toBe("ACCEPTED"); const preparing = orderReducer(accepted, { type: "order/transition", orderId: completedOrder.id, event: "PREPARE" }); expect(preparing.orders[0].status).toBe("PREPARING"); expect(() => orderReducer(preparing, { type: "order/transition", orderId: completedOrder.id, event: "PAY" })).toThrow("非法訂單狀態轉換"); });
+});
