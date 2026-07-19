@@ -1,0 +1,15 @@
+"use client";
+
+import { useState } from "react";
+import { Download, Eye, Plus, Upload } from "lucide-react";
+import { AdminShell } from "@/features/admin/admin-shell";
+import { categories, products } from "@/infrastructure/mock/catalog";
+import { ProductArt } from "@/presentation/components/product-art";
+
+export default function AdminMenuPage() {
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [enabled, setEnabled] = useState<Record<string, boolean>>(() => Object.fromEntries(products.map((product) => [product.id, product.available])));
+  const [prices, setPrices] = useState<Record<string, number>>(() => Object.fromEntries(products.map((product) => [product.id, product.price])));
+  const visible = activeCategory === "all" ? products : products.filter((product) => product.categoryId === activeCategory);
+  return <AdminShell title="菜單與分區管理" actions={<><button className="button button--outline" type="button"><Upload size={18} />匯入</button><button className="button button--outline" type="button"><Download size={18} />匯出</button><button className="button button--primary" type="button"><Plus size={18} />新增商品</button></>}><div className="admin-tabs"><button type="button" className={`admin-tab ${activeCategory === "all" ? "is-active" : ""}`} onClick={() => setActiveCategory("all")}>全部商品</button>{categories.map((category) => <button type="button" className={`admin-tab ${activeCategory === category.id ? "is-active" : ""}`} onClick={() => setActiveCategory(category.id)} key={category.id}>{category.name}</button>)}</div><section className="admin-panel"><div className="admin-panel__header"><div><h2>品牌共用菜單</h2><span className="muted">修改後可一次套用至全部分店，分店覆寫欄位會保留。</span></div><button className="button button--gold" type="button"><Eye size={18} />預覽發布</button></div><div className="admin-panel__body admin-panel__body--scroll"><table className="admin-table"><thead><tr><th>商品</th><th>分區</th><th>品牌價格</th><th>台北信義店覆寫</th><th>供應狀態</th><th>操作</th></tr></thead><tbody>{visible.map((product) => <tr key={product.id}><td><div className="menu-item-admin"><div className="menu-item-admin__art"><ProductArt kind={product.illustration} size="thumb" /></div><div><strong>{product.name}</strong><div className="muted">{product.shortDescription}</div></div></div></td><td>{categories.find((category) => category.id === product.categoryId)?.name}</td><td>NT$ {product.price}</td><td><input aria-label={`${product.name}分店價格`} type="number" min={0} value={prices[product.id]} onChange={(event) => setPrices((current) => ({ ...current, [product.id]: Number(event.target.value) }))} style={{ width: 92, border: "1px solid var(--line)", borderRadius: 9, padding: 8 }} /></td><td><input className="toggle" type="checkbox" checked={enabled[product.id]} onChange={(event) => setEnabled((current) => ({ ...current, [product.id]: event.target.checked }))} aria-label={`${product.name}供應狀態`} /></td><td><button className="button button--soft" type="button">編輯</button></td></tr>)}</tbody></table></div></section></AdminShell>;
+}

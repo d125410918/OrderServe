@@ -1,0 +1,21 @@
+咚雞點餐系統－完整網頁 v1.0
+
+啟動需求：Node.js 22.17 或以上
+安裝：npm install
+開發：npm run dev
+正式建置：npm run build
+正式啟動：npm run start
+完整驗證：npm run verify
+瀏覽器流程驗證：npm run test:e2e
+
+交付內容：
+1. Next.js／React／TypeScript 完整原始碼
+2. 顧客菜單、商品客製、購物車、結帳、訂單追蹤
+3. 一起點建立、房間、參與者餐點與個人金額
+4. 管理儀表板、即時訂單、菜單與分店 QR Code
+5. 領域狀態機、金額與分攤測試
+6. Vercel 設定、環境變數範例、規格與驗證報告
+7. 手機與桌面實際瀏覽器截圖
+
+外部服務說明：
+目前 Supabase、Realtime、Storage 與 LINE Pay 為可替換的 Mock 邊界，不會產生真實扣款；正式營運憑證不包含在交付包內。
